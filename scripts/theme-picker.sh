@@ -13,12 +13,44 @@ fi
 
 mkdir -p "$CACHE_DIR"
 
+# Fetch iTerm2 themes on-demand
+fetch_iterm2_themes() {
+    local cache_file="$CACHE_DIR/iterm2-themes.conf"
+    local cache_age=86400  # 24 hours
+
+    # Check if cache exists and is fresh
+    if [ -f "$cache_file" ]; then
+        local age=$(($(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || stat -c %Y "$cache_file" 2>/dev/null)))
+        if [ $age -lt $cache_age ]; then
+            cat "$cache_file"
+            return
+        fi
+    fi
+
+    # Fetch theme list from iTerm2-Color-Schemes repo
+    tmux display-message "Fetching iTerm2 themes..."
+
+    # Get list of .itermcolors files from GitHub API
+    local themes_json=$(curl -s "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/schemes")
+
+    # Parse and cache theme names (we'll use placeholders for colors until selected)
+    echo "$themes_json" | grep -o '"name":"[^"]*\.itermcolors"' | sed 's/"name":"//g' | sed 's/\.itermcolors"//g' | while read theme; do
+        # Use neutral colors as placeholder
+        echo "$theme|bg=#1e1e2e,fg=#cdd6f4|$theme (iTerm2)"
+    done > "$cache_file"
+
+    cat "$cache_file"
+}
+
 # Load available themes
 load_themes() {
     # Load built-in themes
     if [ -f "$THEMES_DIR/builtin.conf" ]; then
         cat "$THEMES_DIR/builtin.conf" | grep -v '^#' | grep -v '^$'
     fi
+
+    # Load iTerm2 themes
+    fetch_iterm2_themes
 
     # Load custom themes if they exist
     if [ -f "$CACHE_DIR/custom-themes.conf" ]; then

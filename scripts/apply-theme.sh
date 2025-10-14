@@ -21,6 +21,33 @@ if [ -z "$PANE_ID" ]; then
     PANE_ID=$(tmux display-message -p '#{pane_id}')
 fi
 
+# Fetch and convert iTerm2 theme
+fetch_iterm2_theme() {
+    local theme="$1"
+    local temp_file="/tmp/${theme}.itermcolors"
+
+    # Download the .itermcolors file
+    curl -s "https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/${theme}.itermcolors" -o "$temp_file"
+
+    if [ ! -f "$temp_file" ]; then
+        return 1
+    fi
+
+    # Convert using our converter script
+    local colors=$("$CURRENT_DIR/convert-iterm2-theme.sh" "$temp_file" 2>/dev/null)
+    rm -f "$temp_file"
+
+    if [ -n "$colors" ]; then
+        # Cache the converted theme
+        mkdir -p "$CACHE_DIR"
+        echo "$theme|$colors|$theme" >> "$CACHE_DIR/custom-themes.conf"
+        echo "$colors"
+        return 0
+    fi
+
+    return 1
+}
+
 # Load theme colors
 get_theme_colors() {
     local theme="$1"
@@ -36,6 +63,10 @@ get_theme_colors() {
         colors=$(grep "^$theme|" "$CACHE_DIR/custom-themes.conf" | cut -d'|' -f2)
         [ -n "$colors" ] && echo "$colors" && return
     fi
+
+    # Try to fetch as iTerm2 theme
+    colors=$(fetch_iterm2_theme "$theme")
+    [ -n "$colors" ] && echo "$colors" && return
 }
 
 COLORS=$(get_theme_colors "$THEME_NAME")
