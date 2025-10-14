@@ -26,50 +26,36 @@ load_themes() {
     fi
 }
 
-# Preview function to show theme colors
-preview_theme() {
-    local line="$1"
-    local theme_name display_name colors bg fg
-
-    theme_name=$(echo "$line" | cut -d'|' -f1)
-    colors=$(echo "$line" | cut -d'|' -f2)
-    display_name=$(echo "$line" | cut -d'|' -f3)
-
-    bg=$(echo "$colors" | grep -o 'bg=#[0-9a-fA-F]*' | cut -d'#' -f2)
-    fg=$(echo "$colors" | grep -o 'fg=#[0-9a-fA-F]*' | cut -d'#' -f2)
-
-    # Create a visual preview using terminal colors
-    echo "Theme: $display_name"
-    echo "Slug: $theme_name"
-    echo ""
-    echo "Background: #$bg"
-    echo "Foreground: #$fg"
-    echo ""
-    echo "Preview:"
-    # Print colored blocks
-    printf "\033[48;2;$(printf '%d;%d;%d' 0x${bg:0:2} 0x${bg:2:2} 0x${bg:4:2})m"
-    printf "\033[38;2;$(printf '%d;%d;%d' 0x${fg:0:2} 0x${fg:2:2} 0x${fg:4:2})m"
-    echo "  This is sample text with the theme colors  "
-    printf "\033[0m"
-    echo ""
-    echo ""
-    echo "Controls:"
-    echo "  Enter    - Apply theme to current pane"
-    echo "  1-9      - Pin theme to palette slot"
-    echo "  Esc      - Cancel"
-}
-
-export -f preview_theme
-export THEMES_DIR
-export CACHE_DIR
-export CURRENT_DIR
-
 # Show fzf picker
 selected=$(load_themes | fzf \
     --height=50% \
     --border \
     --prompt="Select theme: " \
-    --preview='bash -c "preview_theme {}"' \
+    --preview='
+        line={}
+        theme_name=$(echo "$line" | cut -d"|" -f1)
+        colors=$(echo "$line" | cut -d"|" -f2)
+        display_name=$(echo "$line" | cut -d"|" -f3)
+        bg=$(echo "$colors" | grep -o "bg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+        fg=$(echo "$colors" | grep -o "fg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+        echo "Theme: $display_name"
+        echo "Slug: $theme_name"
+        echo ""
+        echo "Background: #$bg"
+        echo "Foreground: #$fg"
+        echo ""
+        echo "Preview:"
+        printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
+        printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
+        echo "  This is sample text with the theme colors  "
+        printf "\033[0m"
+        echo ""
+        echo ""
+        echo "Controls:"
+        echo "  Enter    - Apply theme to current pane"
+        echo "  1-9      - Pin theme to palette slot"
+        echo "  Esc      - Cancel"
+    ' \
     --preview-window=right:60% \
     --bind='enter:accept' \
     --bind='1:execute(echo pin:1:{} > /tmp/tmux-theme-action)+abort' \
