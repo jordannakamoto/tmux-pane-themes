@@ -13,30 +13,11 @@ fi
 
 mkdir -p "$CACHE_DIR"
 
-# Fetch iTerm2 themes on-demand
-fetch_iterm2_themes() {
-    local cache_file="$CACHE_DIR/iterm2-themes.conf"
-    local cache_age=86400  # 24 hours
-
-    # Check if cache exists and is fresh
-    if [ -f "$cache_file" ]; then
-        local age=$(($(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || stat -c %Y "$cache_file" 2>/dev/null)))
-        if [ $age -lt $cache_age ]; then
-            cat "$cache_file"
-            return
-        fi
+# Load iTerm2 themes from bundled file
+load_iterm2_themes() {
+    if [ -f "$THEMES_DIR/iterm2.conf" ]; then
+        cat "$THEMES_DIR/iterm2.conf" | grep -v '^#' | grep -v '^$'
     fi
-
-    # Fetch theme list from iTerm2-Color-Schemes repo (just names, lazy-load colors)
-    local themes_json=$(curl -s "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/schemes")
-
-    # Parse and cache theme names only
-    echo "$themes_json" | grep '"name"' | grep 'itermcolors' | sed 's/.*"name": "//g' | sed 's/".*//g' | sed 's/\.itermcolors//g' | while IFS= read -r theme; do
-        # Placeholder colors - real colors fetched on-demand when applied
-        echo "$theme|iterm2|$theme"
-    done > "$cache_file"
-
-    cat "$cache_file"
 }
 
 # Load available themes
@@ -47,7 +28,7 @@ load_themes() {
     fi
 
     # Load iTerm2 themes
-    fetch_iterm2_themes
+    load_iterm2_themes
 
     # Load custom themes if they exist
     if [ -f "$CACHE_DIR/custom-themes.conf" ]; then
@@ -70,33 +51,17 @@ selected=$(load_themes | fzf \
         echo "Slug: $theme_name"
         echo ""
 
-        # If iTerm2 theme, fetch colors on-demand
-        if [ "$colors" = "iterm2" ]; then
-            temp_file="/tmp/${theme_name}.itermcolors"
-            url="https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/${theme_name}.itermcolors"
-
-            if curl -s "$url" -o "$temp_file" 2>/dev/null && [ -f "$temp_file" ]; then
-                colors=$('"$CURRENT_DIR"'/convert-iterm2-theme.sh "$temp_file" 2>/dev/null)
-                rm -f "$temp_file"
-            fi
-        fi
-
         bg=$(echo "$colors" | grep -o "bg=#[0-9a-fA-F]*" | cut -d"#" -f2)
         fg=$(echo "$colors" | grep -o "fg=#[0-9a-fA-F]*" | cut -d"#" -f2)
 
-        if [ -n "$bg" ] && [ -n "$fg" ]; then
-            echo "Background: #$bg"
-            echo "Foreground: #$fg"
-            echo ""
-            echo "Preview:"
-            printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
-            printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
-            echo "  This is sample text with the theme colors  "
-            printf "\033[0m"
-        else
-            echo "Loading preview..."
-        fi
-
+        echo "Background: #$bg"
+        echo "Foreground: #$fg"
+        echo ""
+        echo "Preview:"
+        printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
+        printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
+        echo "  This is sample text with the theme colors  "
+        printf "\033[0m"
         echo ""
         echo ""
         echo "Controls:"
