@@ -34,7 +34,7 @@ fetch_iterm2_themes() {
     local themes_json=$(curl -s "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/schemes")
 
     # Parse and cache theme names (we'll use placeholders for colors until selected)
-    echo "$themes_json" | grep -o '"name":"[^"]*\.itermcolors"' | sed 's/"name":"//g' | sed 's/\.itermcolors"//g' | while read theme; do
+    echo "$themes_json" | grep '"name"' | grep 'itermcolors' | sed 's/.*"name": "//g' | sed 's/".*//g' | sed 's/\.itermcolors//g' | while IFS= read -r theme; do
         # Use neutral colors as placeholder
         echo "$theme|bg=#1e1e2e,fg=#cdd6f4|$theme (iTerm2)"
     done > "$cache_file"
