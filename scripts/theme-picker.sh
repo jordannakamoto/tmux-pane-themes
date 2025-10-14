@@ -27,26 +27,13 @@ fetch_iterm2_themes() {
         fi
     fi
 
-    # Fetch theme list from iTerm2-Color-Schemes repo
-    tmux display-message "Fetching iTerm2 themes..."
-
-    # Get list of .itermcolors files from GitHub API
+    # Fetch theme list from iTerm2-Color-Schemes repo (just names, lazy-load colors)
     local themes_json=$(curl -s "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/schemes")
 
-    # Parse theme names and fetch actual colors
+    # Parse and cache theme names only
     echo "$themes_json" | grep '"name"' | grep 'itermcolors' | sed 's/.*"name": "//g' | sed 's/".*//g' | sed 's/\.itermcolors//g' | while IFS= read -r theme; do
-        # Download and convert each theme
-        local temp_file="/tmp/${theme}.itermcolors"
-        local url="https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/${theme}.itermcolors"
-
-        if curl -s "$url" -o "$temp_file" 2>/dev/null && [ -f "$temp_file" ]; then
-            local colors=$("$CURRENT_DIR/convert-iterm2-theme.sh" "$temp_file" 2>/dev/null)
-            rm -f "$temp_file"
-
-            if [ -n "$colors" ]; then
-                echo "$theme|$colors|$theme"
-            fi
-        fi
+        # Placeholder colors - real colors fetched on-demand when applied
+        echo "$theme|iterm2|$theme"
     done > "$cache_file"
 
     cat "$cache_file"
@@ -78,19 +65,38 @@ selected=$(load_themes | fzf \
         theme_name=$(echo "$line" | cut -d"|" -f1)
         colors=$(echo "$line" | cut -d"|" -f2)
         display_name=$(echo "$line" | cut -d"|" -f3)
-        bg=$(echo "$colors" | grep -o "bg=#[0-9a-fA-F]*" | cut -d"#" -f2)
-        fg=$(echo "$colors" | grep -o "fg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+
         echo "Theme: $display_name"
         echo "Slug: $theme_name"
         echo ""
-        echo "Background: #$bg"
-        echo "Foreground: #$fg"
-        echo ""
-        echo "Preview:"
-        printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
-        printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
-        echo "  This is sample text with the theme colors  "
-        printf "\033[0m"
+
+        # If iTerm2 theme, fetch colors on-demand
+        if [ "$colors" = "iterm2" ]; then
+            temp_file="/tmp/${theme_name}.itermcolors"
+            url="https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/${theme_name}.itermcolors"
+
+            if curl -s "$url" -o "$temp_file" 2>/dev/null && [ -f "$temp_file" ]; then
+                colors=$('"$CURRENT_DIR"'/convert-iterm2-theme.sh "$temp_file" 2>/dev/null)
+                rm -f "$temp_file"
+            fi
+        fi
+
+        bg=$(echo "$colors" | grep -o "bg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+        fg=$(echo "$colors" | grep -o "fg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+
+        if [ -n "$bg" ] && [ -n "$fg" ]; then
+            echo "Background: #$bg"
+            echo "Foreground: #$fg"
+            echo ""
+            echo "Preview:"
+            printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
+            printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
+            echo "  This is sample text with the theme colors  "
+            printf "\033[0m"
+        else
+            echo "Loading preview..."
+        fi
+
         echo ""
         echo ""
         echo "Controls:"
