@@ -11,7 +11,5 @@ tmux set-option -g @pane-themes-cache-dir "$HOME/.cache/tmux_pane_themes" 2>/dev
 # Restore saved themes on tmux start
 tmux run-shell "$CURRENT_DIR/scripts/restore-themes.sh"
 
-# Bind keys for theme selection
-# Right-click menu integration will be handled in user's tmux.conf
-# But we can provide a keybinding for the theme menu
-tmux bind-key T run-shell "$CURRENT_DIR/scripts/show-theme-menu.sh"
+# Bind key for theme picker (prefix + T)
+tmux bind-key T run-shell "tmux popup -E -w 80% -h 80% $CURRENT_DIR/scripts/theme-picker.sh"
