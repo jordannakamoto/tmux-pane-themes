@@ -33,10 +33,20 @@ fetch_iterm2_themes() {
     # Get list of .itermcolors files from GitHub API
     local themes_json=$(curl -s "https://api.github.com/repos/mbadolato/iTerm2-Color-Schemes/contents/schemes")
 
-    # Parse and cache theme names (we'll use placeholders for colors until selected)
+    # Parse theme names and fetch actual colors
     echo "$themes_json" | grep '"name"' | grep 'itermcolors' | sed 's/.*"name": "//g' | sed 's/".*//g' | sed 's/\.itermcolors//g' | while IFS= read -r theme; do
-        # Use neutral colors as placeholder
-        echo "$theme|bg=#1e1e2e,fg=#cdd6f4|$theme (iTerm2)"
+        # Download and convert each theme
+        local temp_file="/tmp/${theme}.itermcolors"
+        local url="https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/schemes/${theme}.itermcolors"
+
+        if curl -s "$url" -o "$temp_file" 2>/dev/null && [ -f "$temp_file" ]; then
+            local colors=$("$CURRENT_DIR/convert-iterm2-theme.sh" "$temp_file" 2>/dev/null)
+            rm -f "$temp_file"
+
+            if [ -n "$colors" ]; then
+                echo "$theme|$colors|$theme"
+            fi
+        fi
     done > "$cache_file"
 
     cat "$cache_file"
