@@ -37,8 +37,8 @@ load_themes() {
 }
 
 # Show fzf picker
-selected=$(load_themes | fzf \
-    --height=50% \
+selected=$(load_themes | sort -t'|' -k3 | fzf \
+    --height=100% \
     --border \
     --prompt="Select theme: " \
     --preview='
@@ -69,7 +69,7 @@ selected=$(load_themes | fzf \
         echo "  1-9      - Pin theme to palette slot"
         echo "  Esc      - Cancel"
     ' \
-    --preview-window=right:60% \
+    --preview-window=right:70% \
     --bind='enter:accept' \
     --bind='1:execute(echo pin:1:{} > /tmp/tmux-theme-action)+abort' \
     --bind='2:execute(echo pin:2:{} > /tmp/tmux-theme-action)+abort' \

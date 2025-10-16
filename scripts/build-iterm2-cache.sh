@@ -13,15 +13,15 @@ sed 's/.*"download_url": "//g' | \
 sed 's/".*//g' | \
 while IFS= read -r url; do
     theme=$(basename "$url" .itermcolors)
-    echo "Processing $theme..."
+    # URL decode the theme name
+    theme_decoded=$(echo "$theme" | sed 's/%20/ /g' | sed 's/%28/(/g' | sed 's/%29/)/g' | sed 's/%2B/+/g')
+    echo "Processing $theme_decoded..."
 
-    temp_file="/tmp/${theme}.itermcolors"
-    curl -s "$url" -o "$temp_file"
-
-    if [ -f "$temp_file" ]; then
+    temp_file="/tmp/theme_$$.itermcolors"
+    if curl -s "$url" -o "$temp_file" 2>/dev/null && [ -s "$temp_file" ]; then
         colors=$("$CURRENT_DIR/convert-iterm2-theme.sh" "$temp_file" 2>/dev/null)
         if [ -n "$colors" ]; then
-            echo "$theme|$colors|$theme" >> "$OUTPUT_FILE"
+            echo "$theme_decoded|$colors|$theme_decoded" >> "$OUTPUT_FILE"
         fi
         rm -f "$temp_file"
     fi
