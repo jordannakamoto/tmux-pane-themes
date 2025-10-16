@@ -47,27 +47,36 @@ selected=$(load_themes | sort -t'|' -k3 | fzf \
         colors=$(echo "$line" | cut -d"|" -f2)
         display_name=$(echo "$line" | cut -d"|" -f3)
 
-        echo "Theme: $display_name"
-        echo "Slug: $theme_name"
-        echo ""
-
         bg=$(echo "$colors" | grep -o "bg=#[0-9a-fA-F]*" | cut -d"#" -f2)
         fg=$(echo "$colors" | grep -o "fg=#[0-9a-fA-F]*" | cut -d"#" -f2)
 
-        echo "Background: #$bg"
-        echo "Foreground: #$fg"
-        echo ""
-        echo "Preview:"
+        # Apply colors to entire preview background
         printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
         printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
-        echo "  This is sample text with the theme colors  "
-        printf "\033[0m"
+        clear
+
+        echo ""
+        echo "  Theme: $display_name"
+        echo "  Slug: $theme_name"
+        echo ""
+        echo "  Background: #$bg"
+        echo "  Foreground: #$fg"
         echo ""
         echo ""
-        echo "Controls:"
-        echo "  Enter    - Apply theme to current pane"
-        echo "  1-9      - Pin theme to palette slot"
-        echo "  Esc      - Cancel"
+        echo "  Preview text with theme colors"
+        echo "  Lorem ipsum dolor sit amet"
+        echo "  const example = \"code sample\""
+        echo "  function test() { return true; }"
+        echo ""
+        echo ""
+        echo ""
+        echo "  Controls:"
+        echo "    Enter  - Apply theme"
+        echo "    1-9    - Pin to palette"
+        echo "    Esc    - Cancel"
+
+        # Fill remaining space with colored background
+        for i in {1..50}; do echo ""; done
     ' \
     --preview-window=right:70% \
     --bind='enter:accept' \
