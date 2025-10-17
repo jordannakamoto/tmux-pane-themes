@@ -115,7 +115,7 @@ fi
 # If Enter was pressed, apply the theme
 if [ -n "$selected" ]; then
     theme_name=$(echo "$selected" | cut -d'|' -f1)
-    "$CURRENT_DIR/apply-theme.sh" "$theme_name"
+    FROM_PICKER=1 "$CURRENT_DIR/apply-theme.sh" "$theme_name"
     clear
     exit 0
 fi

@@ -84,7 +84,8 @@ echo "$PANE_ID:$THEME_NAME" >> "$THEME_FILE"
 # Apply the theme colors to the pane
 tmux select-pane -t "$PANE_ID" -P "$COLORS"
 
-# If we're in a shell, restart it with the theme variable
-if [ -n "$TMUX" ]; then
+# Don't restart shell if called from picker (it will exit cleanly)
+# Only restart shell if called directly (e.g., from right-click menu)
+if [ -z "$FROM_PICKER" ] && [ -n "$TMUX" ]; then
     TMUX_PANE_THEME="$THEME_NAME" exec $SHELL
 fi
