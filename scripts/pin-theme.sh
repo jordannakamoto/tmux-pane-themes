@@ -21,7 +21,20 @@ get_theme_line() {
 
     # Check built-in themes
     if [ -f "$THEMES_DIR/builtin.conf" ]; then
-        grep "^$theme|" "$THEMES_DIR/builtin.conf" && return
+        local line=$(grep "^$theme|" "$THEMES_DIR/builtin.conf")
+        if [ -n "$line" ]; then
+            echo "$line"
+            return 0
+        fi
+    fi
+
+    # Check iTerm2 themes
+    if [ -f "$THEMES_DIR/iterm2.conf" ]; then
+        local line=$(grep "^$theme|" "$THEMES_DIR/iterm2.conf")
+        if [ -n "$line" ]; then
+            echo "$line"
+            return 0
+        fi
     fi
 
     # Check custom themes

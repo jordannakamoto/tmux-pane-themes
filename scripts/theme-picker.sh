@@ -16,13 +16,6 @@ fi
 
 mkdir -p "$CACHE_DIR"
 
-# Load iTerm2 themes from bundled file
-load_iterm2_themes() {
-    if [ -f "$THEMES_DIR/iterm2.conf" ]; then
-        cat "$THEMES_DIR/iterm2.conf" | grep -v '^#' | grep -v '^$'
-    fi
-}
-
 # Load available themes
 load_themes() {
     # Load built-in themes
@@ -31,7 +24,9 @@ load_themes() {
     fi
 
     # Load iTerm2 themes
-    load_iterm2_themes
+    if [ -f "$THEMES_DIR/iterm2.conf" ]; then
+        cat "$THEMES_DIR/iterm2.conf" | grep -v '^#' | grep -v '^$'
+    fi
 
     # Load custom themes if they exist
     if [ -f "$CACHE_DIR/custom-themes.conf" ]; then
@@ -39,11 +34,58 @@ load_themes() {
     fi
 }
 
+# Create preview script that reads from cache for palette
+cat > "$CACHE_DIR/show-preview.sh" << 'PREVIEW_SCRIPT'
+#!/usr/bin/env bash
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux-pane-themes"
+CURRENT_DIR="$1"
+THEMES_DIR="$CURRENT_DIR/../themes"
+
+line="$2"
+theme_name=$(echo "$line" | cut -d"|" -f1)
+colors=$(echo "$line" | cut -d"|" -f2)
+display_name=$(echo "$line" | cut -d"|" -f3)
+
+bg=$(echo "$colors" | grep -o "bg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+fg=$(echo "$colors" | grep -o "fg=#[0-9a-fA-F]*" | cut -d"#" -f2)
+
+# Apply colors to entire preview background
+printf "\033[48;2;$((16#${bg:0:2}));$((16#${bg:2:2}));$((16#${bg:4:2}))m"
+printf "\033[38;2;$((16#${fg:0:2}));$((16#${fg:2:2}));$((16#${fg:4:2}))m"
+clear
+
+echo ""
+echo "  Theme: $display_name"
+echo "  Slug: $theme_name"
+echo ""
+echo "  Background: #$bg"
+echo "  Foreground: #$fg"
+echo ""
+echo ""
+echo "  Preview text with theme colors"
+echo "  Lorem ipsum dolor sit amet"
+echo "  const example = \"code sample\""
+echo "  function test() { return true; }"
+echo ""
+echo ""
+echo ""
+echo "  Controls:"
+echo "    Enter  - Apply theme"
+echo "    1-9    - Pin to palette"
+echo "    Esc    - Cancel"
+
+# Fill remaining space with colored background
+for i in {1..50}; do echo ""; done
+PREVIEW_SCRIPT
+
+chmod +x "$CACHE_DIR/show-preview.sh"
+
 # Show fzf picker
 selected=$(load_themes | sort -t'|' -k3 | fzf \
     --height=100% \
     --border \
     --prompt="Select theme: " \
+    --preview="$CACHE_DIR/show-preview.sh '$CURRENT_DIR' {}" \
     --preview='
         line={}
         theme_name=$(echo "$line" | cut -d"|" -f1)
@@ -81,36 +123,20 @@ selected=$(load_themes | sort -t'|' -k3 | fzf \
         # Fill remaining space with colored background
         for i in {1..50}; do echo ""; done
     ' \
-    --preview-window=right:70% \
+    --preview-window='right:70%' \
     --bind='enter:accept' \
-    --bind='1:execute(echo pin:1:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='2:execute(echo pin:2:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='3:execute(echo pin:3:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='4:execute(echo pin:4:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='5:execute(echo pin:5:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='6:execute(echo pin:6:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='7:execute(echo pin:7:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='8:execute(echo pin:8:{} > /tmp/tmux-theme-action)+abort' \
-    --bind='9:execute(echo pin:9:{} > /tmp/tmux-theme-action)+abort' \
+    --bind="1:execute-silent($CURRENT_DIR/pin-theme.sh {1} 1)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="2:execute-silent($CURRENT_DIR/pin-theme.sh {1} 2)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="3:execute-silent($CURRENT_DIR/pin-theme.sh {1} 3)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="4:execute-silent($CURRENT_DIR/pin-theme.sh {1} 4)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="5:execute-silent($CURRENT_DIR/pin-theme.sh {1} 5)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="6:execute-silent($CURRENT_DIR/pin-theme.sh {1} 6)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="7:execute-silent($CURRENT_DIR/pin-theme.sh {1} 7)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="8:execute-silent($CURRENT_DIR/pin-theme.sh {1} 8)+reload(load_themes | sort -t'|' -k3)" \
+    --bind="9:execute-silent($CURRENT_DIR/pin-theme.sh {1} 9)+reload(load_themes | sort -t'|' -k3)" \
     --header='Enter=Apply | 1-9=Pin to palette | Esc=Cancel' \
     --delimiter='|' \
     --with-nth=3)
-
-# Check for pin action
-if [ -f /tmp/tmux-theme-action ]; then
-    action=$(cat /tmp/tmux-theme-action)
-    rm /tmp/tmux-theme-action
-
-    slot=$(echo "$action" | cut -d: -f2)
-    theme_line=$(echo "$action" | cut -d: -f3-)
-    theme_name=$(echo "$theme_line" | cut -d'|' -f1)
-
-    # Pin the theme to palette
-    "$CURRENT_DIR/pin-theme.sh" "$theme_name" "$slot"
-    tmux display-message "Theme '$theme_name' pinned to palette slot $slot"
-    clear
-    exit 0
-fi
 
 # If Enter was pressed, apply the theme
 if [ -n "$selected" ]; then

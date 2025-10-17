@@ -58,6 +58,12 @@ get_theme_colors() {
         [ -n "$colors" ] && echo "$colors" && return
     fi
 
+    # Check iTerm2 themes
+    if [ -f "$THEMES_DIR/iterm2.conf" ]; then
+        colors=$(grep "^$theme|" "$THEMES_DIR/iterm2.conf" | cut -d'|' -f2)
+        [ -n "$colors" ] && echo "$colors" && return
+    fi
+
     # Check custom themes
     if [ -f "$CACHE_DIR/custom-themes.conf" ]; then
         colors=$(grep "^$theme|" "$CACHE_DIR/custom-themes.conf" | cut -d'|' -f2)
