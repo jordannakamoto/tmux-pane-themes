@@ -5,6 +5,9 @@ CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 THEMES_DIR="$CURRENT_DIR/../themes"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux-pane-themes"
 
+# Ensure clean exit on Esc
+trap 'clear; exit 0' EXIT
+
 # Check if fzf is available
 if ! command -v fzf &> /dev/null; then
     tmux display-message "fzf is required for the theme picker. Install with: brew install fzf"
@@ -105,6 +108,7 @@ if [ -f /tmp/tmux-theme-action ]; then
     # Pin the theme to palette
     "$CURRENT_DIR/pin-theme.sh" "$theme_name" "$slot"
     tmux display-message "Theme '$theme_name' pinned to palette slot $slot"
+    clear
     exit 0
 fi
 
@@ -112,4 +116,10 @@ fi
 if [ -n "$selected" ]; then
     theme_name=$(echo "$selected" | cut -d'|' -f1)
     "$CURRENT_DIR/apply-theme.sh" "$theme_name"
+    clear
+    exit 0
 fi
+
+# If Esc was pressed or nothing selected, just exit cleanly
+clear
+exit 0
